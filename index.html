@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="RecordGuard — Track and manage business document expiry dates with real-time alerts."/>
+  <meta name="theme-color" content="#4338CA"/>
+  <title>Dashboard — RecordGuard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>"/>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <!-- Prevent dark-mode flash (FOUC) -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('rg_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="nprogress"><div class="bar" id="progressBar" style="width:0%;opacity:0"></div></div>
+
+  <!-- Hamburger -->
+  <button class="hamburger" id="hamburger" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-shield-check"></i></div>
+      <div class="logo-text">Record<span>Guard</span></div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-item active" id="nav-dashboard">
+        <i class="ti ti-layout-dashboard"></i> Dashboard
+      </a>
+      <a href="/pages/records.html" class="nav-item" id="nav-records">
+        <i class="ti ti-files"></i> All Records
+      </a>
+      <a href="/pages/add.html" class="nav-item" id="nav-add">
+        <i class="ti ti-circle-plus"></i> Add Record
+      </a>
+      <a href="/pages/reports.html" class="nav-item" id="nav-reports">
+        <i class="ti ti-chart-bar"></i> Reports
+      </a>
+      <a href="/pages/settings.html" class="nav-item" id="nav-settings">
+        <i class="ti ti-settings"></i> Settings
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="userAvatar">RG</div>
+        <div>
+          <div class="user-name" id="userName">Admin User</div>
+          <div class="user-role" id="userRole">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Overview of all business records &amp; expiry alerts</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Search records, owners, vendors…" id="globalSearch" oninput="filterRecords()" aria-label="Search records"/>
+        </div>
+        <a href="/pages/add.html" class="btn btn-primary" id="addRecordBtn">
+          <i class="ti ti-plus"></i> Add Record
+        </a>
+      </div>
+    </header>
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner" id="alertBanner" role="alert" aria-live="polite" style="display:none"></div>
+
+    <!-- METRIC CARDS -->
+    <section class="metrics" aria-label="Summary metrics">
+      <div class="metric-card m-expired" onclick="filterByStatus('expired')" role="button" tabindex="0" aria-label="Expired records" onkeydown="if(event.key==='Enter'||event.key===' ')filterByStatus('expired')">
+        <div class="metric-icon"><i class="ti ti-alert-circle"></i></div>
+        <div class="metric-body">
+          <div class="metric-label">Expired</div>
+          <div class="metric-value" id="countExpired">—</div>
+          <div class="metric-sub">Immediate action needed</div>
+        </div>
+      </div>
+      <div class="metric-card m-critical" onclick="filterByStatus('critical')" role="button" tabindex="0" aria-label="Critical records" onkeydown="if(event.key==='Enter'||event.key===' ')filterByStatus('critical')">
+        <div class="metric-icon"><i class="ti ti-alarm"></i></div>
+        <div class="metric-body">
+          <div class="metric-label">Critical (≤7 days)</div>
+          <div class="metric-value" id="countCritical">—</div>
+          <div class="metric-sub">Renew this week</div>
+        </div>
+      </div>
+      <div class="metric-card m-warning" onclick="filterByStatus('warning')" role="button" tabindex="0" aria-label="Warning records" onkeydown="if(event.key==='Enter'||event.key===' ')filterByStatus('warning')">
+        <div class="metric-icon"><i class="ti ti-clock"></i></div>
+        <div class="metric-body">
+          <div class="metric-label">Warning (≤30 days)</div>
+          <div class="metric-value" id="countWarning">—</div>
+          <div class="metric-sub">Plan renewal soon</div>
+        </div>
+      </div>
+      <div class="metric-card m-active" onclick="filterByStatus('active')" role="button" tabindex="0" aria-label="Active records" onkeydown="if(event.key==='Enter'||event.key===' ')filterByStatus('active')">
+        <div class="metric-icon"><i class="ti ti-circle-check"></i></div>
+        <div class="metric-body">
+          <div class="metric-label">Active</div>
+          <div class="metric-value" id="countActive">—</div>
+          <div class="metric-sub">All clear</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILTERS ROW -->
+    <div class="filters-row">
+      <span class="filter-label"><i class="ti ti-filter"></i> Filter:</span>
+      <select id="filterStatus" onchange="filterRecords()" aria-label="Filter by status">
+        <option value="all">All Statuses</option>
+        <option value="expired">Expired</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="active">Active</option>
+      </select>
+      <select id="filterCategory" onchange="filterRecords()" aria-label="Filter by category">
+        <option value="all">All Categories</option>
+        <option value="Vendor Contract">Vendor Contract</option>
+        <option value="Compliance">Compliance</option>
+        <option value="Safety">Safety</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Inspection">Inspection</option>
+        <option value="License">License</option>
+      </select>
+      <select id="sortBy" onchange="filterRecords()" aria-label="Sort by">
+        <option value="expiry">Sort: Expiry Date</option>
+        <option value="name">Sort: Name</option>
+        <option value="status">Sort: Status</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()" id="resetFiltersBtn">
+        <i class="ti ti-refresh"></i> Reset
+      </button>
+    </div>
+
+    <!-- RECORDS TABLE -->
+    <section class="table-section" aria-label="Records table">
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">
+            <i class="ti ti-table"></i>
+            Records
+            <span class="table-count" id="tableCount">…</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Record Name</th>
+              <th>Category</th>
+              <th>Owner</th>
+              <th>Vendor / Entity</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+              <th>Days</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- DELETE MODAL -->
+  <div id="deleteModal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-box">
+      <div class="modal-icon danger"><i class="ti ti-trash"></i></div>
+      <h2 id="deleteModalTitle">Delete this record?</h2>
+      <p>This action is permanent and cannot be undone. The record will be removed from the database.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDeleteModal()" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()" id="confirmDeleteBtn">
+          <i class="ti ti-trash"></i> Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast-container"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

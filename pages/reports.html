@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Reports — Visual analytics of your business record health."/>
+  <meta name="theme-color" content="#4338CA"/>
+  <title>Reports — RecordGuard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <!-- Prevent dark-mode FOUC -->
+  <script>(function(){var t=localStorage.getItem('rg_theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="nprogress"><div class="bar" id="progressBar" style="width:0%;opacity:0"></div></div>
+
+  <button class="hamburger" id="hamburger" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-shield-check"></i></div>
+      <div class="logo-text">Record<span>Guard</span></div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-item"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <a href="/pages/records.html" class="nav-item"><i class="ti ti-files"></i> All Records</a>
+      <a href="/pages/add.html" class="nav-item"><i class="ti ti-circle-plus"></i> Add Record</a>
+      <a href="/pages/reports.html" class="nav-item active"><i class="ti ti-chart-bar"></i> Reports</a>
+      <a href="/pages/settings.html" class="nav-item"><i class="ti ti-settings"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="userAvatar">RG</div>
+        <div>
+          <div class="user-name" id="userName">Admin User</div>
+          <div class="user-role" id="userRole">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Reports</h1>
+        <p class="page-sub" id="reportSub">Analytics overview of your record health</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="init()" id="refreshBtn"><i class="ti ti-refresh"></i> Refresh</button>
+    </header>
+
+    <div class="report-grid" id="reportGrid">
+      <!-- Skeleton while loading -->
+      <div class="report-card">
+        <div class="report-card-title"><span class="skeleton sk sk-md"></span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="skeleton" style="height:80px;border-radius:12px"></div>
+          <div class="skeleton" style="height:80px;border-radius:12px"></div>
+          <div class="skeleton" style="height:80px;border-radius:12px"></div>
+          <div class="skeleton" style="height:80px;border-radius:12px"></div>
+        </div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-title"><span class="skeleton sk sk-md"></span></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="skeleton" style="height:16px;border-radius:8px"></div>
+          <div class="skeleton" style="height:16px;border-radius:8px;width:80%"></div>
+          <div class="skeleton" style="height:16px;border-radius:8px;width:60%"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    async function init() {
+      const grid = document.getElementById('reportGrid');
+      grid.innerHTML = `
+        <div class="report-card"><div class="report-card-title"><span class="skeleton sk sk-md"></span></div><div style="display:flex;flex-direction:column;gap:10px"><div class="skeleton" style="height:14px"></div><div class="skeleton" style="height:14px;width:80%"></div></div></div>
+        <div class="report-card"><div class="report-card-title"><span class="skeleton sk sk-md"></span></div><div style="display:flex;flex-direction:column;gap:10px"><div class="skeleton" style="height:14px"></div><div class="skeleton" style="height:14px;width:70%"></div></div></div>
+        <div class="report-card"><div class="report-card-title"><span class="skeleton sk sk-md"></span></div><div style="display:flex;flex-direction:column;gap:8px"><div class="skeleton" style="height:40px;border-radius:8px"></div><div class="skeleton" style="height:40px;border-radius:8px"></div></div></div>
+        <div class="report-card"><div class="report-card-title"><span class="skeleton sk sk-md"></span></div><div style="display:flex;flex-direction:column;gap:10px"><div class="skeleton" style="height:14px"></div><div class="skeleton" style="height:14px;width:60%"></div></div></div>
+      `;
+
+      try {
+        const [records, stats] = await Promise.all([API.getRecords(), API.getStats()]);
+        document.getElementById('reportSub').textContent = `${stats.total || records.length} total records — last updated now`;
+        renderReports(records, stats);
+      } catch (err) {
+        showToast('Could not load data: ' + err.message, 'error');
+        grid.innerHTML = `<div class="report-card" style="grid-column:1/-1"><div class="empty-state"><i class="ti ti-cloud-off"></i><h3>Could not load report data</h3><p>${err.message}</p></div></div>`;
+      }
+    }
+
+    function renderReports(records, stats) {
+      const grid = document.getElementById('reportGrid');
+
+      const statusItems = [
+        { key:'expired',  label:'Expired',  bg:'var(--expired-bg)',  color:'var(--expired-text)',  border:'var(--expired-border)' },
+        { key:'critical', label:'Critical', bg:'var(--critical-bg)', color:'var(--critical-text)', border:'var(--critical-border)' },
+        { key:'warning',  label:'Warning',  bg:'var(--warning-bg)',  color:'var(--warning-text)',  border:'var(--warning-border)' },
+        { key:'active',   label:'Active',   bg:'var(--active-bg)',   color:'var(--active-text)',   border:'var(--active-border)' },
+      ];
+
+      // Category bars
+      const catMap = {};
+      records.forEach(r => catMap[r.cat] = (catMap[r.cat] || 0) + 1);
+      const catMax = Math.max(...Object.values(catMap), 1);
+      const catBars = Object.entries(catMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, count]) => `
+          <div class="bar-row">
+            <div class="bar-label" title="${cat}">${cat}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:0%" data-w="${Math.round((count/catMax)*100)}%"></div></div>
+            <div class="bar-count">${count}</div>
+          </div>`).join('');
+
+      // Upcoming list (next 30 days)
+      const upcoming = records.filter(r => r.days >= 0 && r.days <= 30).sort((a,b) => a.days - b.days);
+      const upcomingHTML = upcoming.length === 0
+        ? `<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:2rem 1rem"><i class="ti ti-circle-check" style="display:block;font-size:32px;margin-bottom:8px;opacity:0.4"></i>No records expiring in the next 30 days!</div>`
+        : upcoming.map(r => `
+          <div class="upcoming-item">
+            <div class="upcoming-name" title="${r.name}">${r.name}</div>
+            ${badgeHTML(r.status)}
+          </div>`).join('');
+
+      // Owner bars
+      const ownerMap = {};
+      records.forEach(r => { if (r.owner) ownerMap[r.owner] = (ownerMap[r.owner] || 0) + 1; });
+      const ownerMax = Math.max(...Object.values(ownerMap), 1);
+      const ownerBars = Object.entries(ownerMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(([owner, count]) => `
+          <div class="bar-row">
+            <div class="bar-label" title="${owner}">${owner.split(' ')[0]}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#7C3AED,#4338CA)" data-w="${Math.round((count/ownerMax)*100)}%"></div></div>
+            <div class="bar-count">${count}</div>
+          </div>`).join('');
+
+      grid.innerHTML = `
+        <!-- Status Breakdown -->
+        <div class="report-card">
+          <div class="report-card-title"><i class="ti ti-chart-donut"></i> Status Breakdown</div>
+          <div class="status-breakdown">
+            ${statusItems.map(s => `
+              <div class="status-item" style="background:${s.bg};border-color:${s.border}">
+                <div class="s-label" style="color:${s.color}">${s.label}</div>
+                <div class="s-count" style="color:${s.color}">${stats[s.key] || 0}</div>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-muted);font-weight:500">
+            <span>Total Records</span>
+            <span style="font-weight:800;color:var(--text-primary)">${stats.total || records.length}</span>
+          </div>
+        </div>
+
+        <!-- Category Bars -->
+        <div class="report-card">
+          <div class="report-card-title"><i class="ti ti-tags"></i> Records by Category</div>
+          ${catBars || '<div style="color:var(--text-muted);font-size:13px">No data</div>'}
+        </div>
+
+        <!-- Upcoming Expiry -->
+        <div class="report-card">
+          <div class="report-card-title"><i class="ti ti-clock-countdown"></i> Expiring in Next 30 Days</div>
+          <div class="upcoming-list">${upcomingHTML}</div>
+        </div>
+
+        <!-- Owner Bars -->
+        <div class="report-card">
+          <div class="report-card-title"><i class="ti ti-users"></i> Records by Owner</div>
+          ${ownerBars || '<div style="color:var(--text-muted);font-size:13px">No data</div>'}
+        </div>
+      `;
+
+      // Animate bars after render
+      setTimeout(() => {
+        document.querySelectorAll('.bar-fill[data-w]').forEach(el => {
+          el.style.width = el.dataset.w;
+        });
+      }, 80);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

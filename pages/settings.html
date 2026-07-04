@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Settings — Configure RecordGuard preferences and account details." />
+  <meta name="theme-color" content="#4338CA" />
+  <title>Settings — RecordGuard</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <!-- Prevent dark-mode FOUC -->
+  <script>(function () { var t = localStorage.getItem('rg_theme') || 'light'; document.documentElement.setAttribute('data-theme', t); })();</script>
+</head>
+
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="nprogress">
+    <div class="bar" id="progressBar" style="width:0%;opacity:0"></div>
+  </div>
+
+  <button class="hamburger" id="hamburger" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-shield-check"></i></div>
+      <div class="logo-text">Record<span>Guard</span></div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-item"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <a href="/pages/records.html" class="nav-item"><i class="ti ti-files"></i> All Records</a>
+      <a href="/pages/add.html" class="nav-item"><i class="ti ti-circle-plus"></i> Add Record</a>
+      <a href="/pages/reports.html" class="nav-item"><i class="ti ti-chart-bar"></i> Reports</a>
+      <a href="/pages/settings.html" class="nav-item active"><i class="ti ti-settings"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="userAvatar">RG</div>
+        <div>
+          <div class="user-name" id="userName">Admin User</div>
+          <div class="user-role" id="userRole">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Configure your RecordGuard preferences</p>
+      </div>
+    </header>
+
+    <div class="settings-grid">
+
+      <!-- Appearance -->
+      <div class="settings-card">
+        <div class="settings-card-title"><i class="ti ti-palette"></i> Appearance</div>
+        <div class="settings-card-desc">Customize the look and feel of the application</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Dark Mode</div>
+            <div class="setting-desc">Switch between light and dark theme</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle" id="darkModeToggle" onclick="handleDarkMode(this)"
+              aria-label="Toggle dark mode"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Database Connection -->
+      <div class="settings-card">
+        <div class="settings-card-title"><i class="ti ti-database"></i> Database Connection</div>
+        <div class="settings-card-desc">MongoDB connection status and configuration</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">MongoDB Status</div>
+            <div class="setting-desc" id="mongoUri">mongodb://localhost:27017/recordguard</div>
+          </div>
+          <span class="connection-badge connected" id="dbStatusBadge">
+            <span class="connection-dot"></span> Connected
+          </span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Total Records</div>
+            <div class="setting-desc">Records currently in the database</div>
+          </div>
+          <span style="font-size:22px;font-weight:900;color:var(--primary)" id="totalRecords">—</span>
+        </div>
+      </div>
+
+      <!-- Alert Thresholds -->
+      <div class="settings-card">
+        <div class="settings-card-title"><i class="ti ti-bell"></i> Alert Thresholds</div>
+        <div class="settings-card-desc">Define when records appear in each warning level</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Critical threshold (days)</div>
+            <div class="setting-desc">Records expiring within this many days show as Critical</div>
+          </div>
+          <input type="number" value="7" min="1" max="30" id="criticalDays"
+            style="width:80px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:14px;font-family:inherit;color:var(--text-primary);background:var(--surface-2);font-weight:600;outline:none;text-align:center"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Warning threshold (days)</div>
+            <div class="setting-desc">Records expiring within this many days show as Warning</div>
+          </div>
+          <input type="number" value="30" min="1" max="90" id="warningDays"
+            style="width:80px;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:14px;font-family:inherit;color:var(--text-primary);background:var(--surface-2);font-weight:600;outline:none;text-align:center"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="settings-card">
+        <div class="settings-card-title"><i class="ti ti-bell-ringing"></i> Notifications</div>
+        <div class="settings-card-desc">Control how and when you receive alerts</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Dashboard alert banner</div>
+            <div class="setting-desc">Show alert when urgent records exist</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle on" id="alertBannerToggle" onclick="this.classList.toggle('on')"
+              aria-label="Toggle alert banner"></button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Email reminders</div>
+            <div class="setting-desc">Daily digest to record owners (coming soon)</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle" onclick="this.classList.toggle('on')" aria-label="Toggle email reminders"></button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Browser notifications</div>
+            <div class="setting-desc">Push alerts when you open the app</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle" onclick="this.classList.toggle('on')"
+              aria-label="Toggle browser notifications"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile -->
+      <div class="settings-card">
+        <div class="settings-card-title"><i class="ti ti-user-circle"></i> Profile</div>
+        <div class="settings-card-desc">Your account details</div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-row">
+            <label for="p-name">Full Name</label>
+            <input type="text" id="p-name" value="Admin User" />
+          </div>
+          <div class="form-row">
+            <label for="p-role">Role</label>
+            <input type="text" id="p-role" value="Admin" />
+          </div>
+          <div class="form-row" style="grid-column:1/-1">
+            <label for="p-org">Organization</label>
+            <input type="text" id="p-org" value="Reliance Industries Ltd" />
+          </div>
+        </div>
+        <div style="margin-top:18px;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="saveProfile()" id="saveProfileBtn">
+            <i class="ti ti-device-floppy"></i> Save Changes
+          </button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="settings-card danger-zone">
+        <div class="settings-card-title"><i class="ti ti-alert-triangle"></i> Danger Zone</div>
+        <div class="settings-card-desc">These actions are irreversible. Proceed with extreme caution.</div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Reset to sample data</div>
+            <div class="setting-desc">Clears <strong>all</strong> records and restores the 12 default demo records</div>
+          </div>
+          <button class="btn btn-sm" id="resetDataBtn"
+            style="border-color:var(--expired-border);color:var(--expired-text);background:var(--expired-bg)"
+            onclick="resetData()">
+            <i class="ti ti-refresh-dot"></i> Reset Data
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    async function loadStats() {
+      try {
+        const stats = await API.getStats();
+        document.getElementById('totalRecords').textContent = stats.total || 0;
+        document.getElementById('dbStatusBadge').className = 'connection-badge connected';
+        document.getElementById('dbStatusBadge').innerHTML = '<span class="connection-dot"></span> Connected';
+      } catch (err) {
+        document.getElementById('dbStatusBadge').className = 'connection-badge disconnected';
+        document.getElementById('dbStatusBadge').innerHTML = '<span class="connection-dot"></span> Disconnected';
+        document.getElementById('totalRecords').textContent = 'N/A';
+      }
+    }
+
+    function handleDarkMode(btn) {
+      const next = toggleTheme();
+      btn.classList.toggle('on', next === 'dark');
+    }
+
+    function saveProfile() {
+      const name = document.getElementById('p-name').value.trim();
+      const role = document.getElementById('p-role').value.trim();
+      const org = document.getElementById('p-org').value.trim();
+      if (!name) { showToast('Name cannot be empty', 'warning'); return; }
+      localStorage.setItem('rg_profile', JSON.stringify({ name, role, org }));
+      // Immediately reflect new name + initials in sidebar (no page reload needed)
+      loadProfile();
+      showToast('Profile saved — sidebar updated!', 'success');
+    }
+
+    async function resetData() {
+      if (!confirm('This will delete ALL your records and restore the 12 sample records. This cannot be undone. Continue?')) return;
+      const btn = document.getElementById('resetDataBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Resetting…';
+      try {
+        const result = await API.resetData();
+        showToast(`Data reset — ${result.seeded} sample records restored`, 'success');
+        await loadStats();
+        setTimeout(() => { window.location.href = '/'; }, 1600);
+      } catch (err) {
+        showToast('Reset failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-refresh-dot"></i> Reset Data';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      // Sync dark mode toggle
+      const theme = document.documentElement.getAttribute('data-theme');
+      if (theme === 'dark') document.getElementById('darkModeToggle').classList.add('on');
+      // Restore profile
+      try {
+        const profile = JSON.parse(localStorage.getItem('rg_profile') || '{}');
+        if (profile.name) document.getElementById('p-name').value = profile.name;
+        if (profile.role) document.getElementById('p-role').value = profile.role;
+        if (profile.org) document.getElementById('p-org').value = profile.org;
+      } catch (e) { /* ignore parse errors */ }
+    });
+  </script>
+</body>
+
+</html>

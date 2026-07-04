@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Add or edit a business record in RecordGuard."/>
+  <meta name="theme-color" content="#4338CA"/>
+  <title>Add Record — RecordGuard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <!-- Prevent dark-mode FOUC -->
+  <script>(function(){var t=localStorage.getItem('rg_theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="nprogress"><div class="bar" id="progressBar" style="width:0%;opacity:0"></div></div>
+
+  <button class="hamburger" id="hamburger" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-shield-check"></i></div>
+      <div class="logo-text">Record<span>Guard</span></div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-item"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <a href="/pages/records.html" class="nav-item"><i class="ti ti-files"></i> All Records</a>
+      <a href="/pages/add.html" class="nav-item active"><i class="ti ti-circle-plus"></i> Add Record</a>
+      <a href="/pages/reports.html" class="nav-item"><i class="ti ti-chart-bar"></i> Reports</a>
+      <a href="/pages/settings.html" class="nav-item"><i class="ti ti-settings"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="userAvatar">RG</div>
+        <div>
+          <div class="user-name" id="userName">Admin User</div>
+          <div class="user-role" id="userRole">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title" id="pageHeading">Add New Record</h1>
+        <p class="page-sub" id="pageSubheading">Fill in the details below to track a new document</p>
+      </div>
+      <a href="/" class="btn btn-ghost" id="backBtn"><i class="ti ti-arrow-left"></i> Back to Dashboard</a>
+    </header>
+
+    <div class="form-page">
+      <div class="form-card">
+
+        <div class="form-section-title"><i class="ti ti-info-circle"></i> Basic Information</div>
+        <div class="form-grid">
+
+          <div class="form-row full">
+            <label for="f-name">Record Name <span style="color:var(--expired-text)">*</span></label>
+            <input id="f-name" type="text" placeholder="e.g. Infosys Master Services Agreement" autocomplete="off"/>
+            <span class="field-error" id="err-name">Record name is required</span>
+          </div>
+
+          <div class="form-row">
+            <label for="f-cat">Category <span style="color:var(--expired-text)">*</span></label>
+            <select id="f-cat">
+              <option value="">Select category…</option>
+              <option value="Vendor Contract">Vendor Contract</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Safety">Safety</option>
+              <option value="Insurance">Insurance</option>
+              <option value="Inspection">Inspection</option>
+              <option value="License">License</option>
+            </select>
+            <span class="field-error" id="err-cat">Please select a category</span>
+          </div>
+
+          <div class="form-row">
+            <label for="f-expiry">Expiry Date <span style="color:var(--expired-text)">*</span></label>
+            <input id="f-expiry" type="date"/>
+            <span class="field-error" id="err-expiry">Expiry date is required</span>
+          </div>
+        </div>
+
+        <div class="form-section-title"><i class="ti ti-list-details"></i> Additional Details</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="f-owner">Responsible Owner</label>
+            <input id="f-owner" type="text" placeholder="e.g. Priya Sharma"/>
+          </div>
+
+          <div class="form-row">
+            <label for="f-vendor">Vendor / Issuing Authority</label>
+            <input id="f-vendor" type="text" placeholder="e.g. Bureau Veritas"/>
+          </div>
+
+          <div class="form-row full">
+            <label for="f-notes">Notes / Renewal Instructions</label>
+            <textarea id="f-notes" placeholder="Any special instructions, contact details, or renewal process…"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a href="/" class="btn btn-ghost" id="cancelBtn"><i class="ti ti-x"></i> Cancel</a>
+          <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">
+            <i class="ti ti-device-floppy"></i>
+            <span id="saveBtnLabel">Save Record</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    let editId = null;
+
+    // Validate required fields
+    function validate() {
+      let valid = true;
+      const fields = [
+        { id: 'f-name',   err: 'err-name' },
+        { id: 'f-cat',    err: 'err-cat' },
+        { id: 'f-expiry', err: 'err-expiry' },
+      ];
+      fields.forEach(({ id, err }) => {
+        const el    = document.getElementById(id);
+        const errEl = document.getElementById(err);
+        if (!el.value.trim()) {
+          el.classList.add('invalid');
+          errEl.classList.add('show');
+          valid = false;
+        } else {
+          el.classList.remove('invalid');
+          errEl.classList.remove('show');
+        }
+      });
+      return valid;
+    }
+
+    async function saveRecord() {
+      if (!validate()) return;
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+      const data = {
+        name:   document.getElementById('f-name').value.trim(),
+        cat:    document.getElementById('f-cat').value,
+        expiry: document.getElementById('f-expiry').value,
+        owner:  document.getElementById('f-owner').value.trim(),
+        vendor: document.getElementById('f-vendor').value.trim(),
+        notes:  document.getElementById('f-notes').value.trim(),
+      };
+
+      try {
+        if (editId) {
+          await API.updateRecord(editId, data);
+          showToast('Record updated successfully!', 'success');
+        } else {
+          await API.createRecord(data);
+          showToast('Record saved successfully!', 'success');
+        }
+        setTimeout(() => { window.location.href = '/'; }, 1200);
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="ti ti-device-floppy"></i> <span id="saveBtnLabel">${editId ? 'Update' : 'Save'} Record</span>`;
+      }
+    }
+
+    // Clear validation on input
+    ['f-name','f-cat','f-expiry'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', () => {
+        document.getElementById(id).classList.remove('invalid');
+        const errMap = { 'f-name':'err-name','f-cat':'err-cat','f-expiry':'err-expiry' };
+        document.getElementById(errMap[id])?.classList.remove('show');
+      });
+    });
+
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) {
+        editId = id;
+        document.getElementById('pageHeading').textContent    = 'Edit Record';
+        document.getElementById('pageSubheading').textContent = 'Update the details for this record';
+        document.getElementById('saveBtnLabel').textContent   = 'Update Record';
+        const btn = document.getElementById('saveBtn');
+        btn.innerHTML = '<span class="spinner"></span> Loading…';
+        btn.disabled  = true;
+        try {
+          const r = await API.getRecord(id);
+          document.getElementById('f-name').value   = r.name   || '';
+          document.getElementById('f-cat').value    = r.cat    || '';
+          document.getElementById('f-expiry').value = r.expiry || '';
+          document.getElementById('f-owner').value  = r.owner  || '';
+          document.getElementById('f-vendor').value = r.vendor || '';
+          document.getElementById('f-notes').value  = r.notes  || '';
+        } catch (err) {
+          showToast('Could not load record: ' + err.message, 'error');
+        }
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> <span id="saveBtnLabel">Update Record</span>';
+        btn.disabled  = false;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="All Records — Browse, search, and manage all tracked business documents."/>
+  <meta name="theme-color" content="#4338CA"/>
+  <title>All Records — RecordGuard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>"/>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <!-- Prevent dark-mode FOUC -->
+  <script>(function(){var t=localStorage.getItem('rg_theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="nprogress"><div class="bar" id="progressBar" style="width:0%;opacity:0"></div></div>
+
+  <button class="hamburger" id="hamburger" aria-label="Open menu"><i class="ti ti-menu-2"></i></button>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-icon"><i class="ti ti-shield-check"></i></div>
+      <div class="logo-text">Record<span>Guard</span></div>
+    </div>
+    <nav class="nav">
+      <a href="/" class="nav-item" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <a href="/pages/records.html" class="nav-item active" id="nav-records"><i class="ti ti-files"></i> All Records</a>
+      <a href="/pages/add.html" class="nav-item" id="nav-add"><i class="ti ti-circle-plus"></i> Add Record</a>
+      <a href="/pages/reports.html" class="nav-item" id="nav-reports"><i class="ti ti-chart-bar"></i> Reports</a>
+      <a href="/pages/settings.html" class="nav-item" id="nav-settings"><i class="ti ti-settings"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="userAvatar">RG</div>
+        <div>
+          <div class="user-name" id="userName">Admin User</div>
+          <div class="user-role" id="userRole">Administrator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">All Records</h1>
+        <p class="page-sub" id="recordSubtitle">Loading records…</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <i class="ti ti-search"></i>
+          <input type="text" placeholder="Search name, owner, vendor…" id="search" oninput="render()" aria-label="Search records"/>
+        </div>
+        <a href="/pages/add.html" class="btn btn-primary" id="addBtn"><i class="ti ti-plus"></i> Add Record</a>
+      </div>
+    </header>
+
+    <div class="filters-row">
+      <span class="filter-label"><i class="ti ti-filter"></i> Filter:</span>
+      <select id="filterStatus" onchange="render()" aria-label="Filter by status">
+        <option value="all">All Statuses</option>
+        <option value="expired">Expired</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="active">Active</option>
+      </select>
+      <select id="filterCategory" onchange="render()" aria-label="Filter by category">
+        <option value="all">All Categories</option>
+        <option value="Vendor Contract">Vendor Contract</option>
+        <option value="Compliance">Compliance</option>
+        <option value="Safety">Safety</option>
+        <option value="Insurance">Insurance</option>
+        <option value="Inspection">Inspection</option>
+        <option value="License">License</option>
+      </select>
+      <select id="sortBy" onchange="render()" aria-label="Sort by">
+        <option value="expiry">Sort: Expiry Date</option>
+        <option value="name">Sort: Name</option>
+        <option value="status">Sort: Status</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()" id="resetBtn"><i class="ti ti-refresh"></i> Reset</button>
+    </div>
+
+    <section class="table-section" aria-label="Records table">
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">
+            <i class="ti ti-table"></i> Records
+            <span class="table-count" id="tableCount">…</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Record Name</th>
+              <th>Category</th>
+              <th>Owner</th>
+              <th>Vendor</th>
+              <th>Expiry Date</th>
+              <th>Status</th>
+              <th>Days</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- DELETE MODAL -->
+  <div id="deleteModal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitleRec">
+    <div class="modal-box">
+      <div class="modal-icon danger"><i class="ti ti-trash"></i></div>
+      <h2 id="deleteModalTitleRec">Delete this record?</h2>
+      <p>This action is permanent and cannot be undone.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDeleteModal()" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-danger" onclick="confirmDelete()" id="confirmDeleteBtn"><i class="ti ti-trash"></i> Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    let allRecords = [];
+    let deleteTargetId = null;
+
+    async function init() {
+      document.getElementById('tbody').innerHTML = skeletonRows(6, 8);
+      try {
+        allRecords = await API.getRecords();
+        render();
+      } catch (err) {
+        showToast('Could not load records — ' + err.message, 'error');
+        document.getElementById('tbody').innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="ti ti-cloud-off"></i><h3>Connection error</h3><p>${err.message}</p></div></td></tr>`;
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filterStatus').value = 'all';
+      document.getElementById('filterCategory').value = 'all';
+      document.getElementById('sortBy').value = 'expiry';
+      document.getElementById('search').value = '';
+      render();
+    }
+
+    function render() {
+      const q  = document.getElementById('search').value.toLowerCase();
+      const fs = document.getElementById('filterStatus').value;
+      const fc = document.getElementById('filterCategory').value;
+      const sb = document.getElementById('sortBy').value;
+
+      let rows = [...allRecords];
+      if (q)          rows = rows.filter(r => ((r.name||'')+(r.vendor||'')+(r.owner||'')).toLowerCase().includes(q));
+      if (fs !== 'all') rows = rows.filter(r => r.status === fs);
+      if (fc !== 'all') rows = rows.filter(r => r.cat === fc);
+
+      if (sb === 'expiry') rows.sort((a, b) => (a.days ?? 9999) - (b.days ?? 9999));
+      else if (sb === 'name') rows.sort((a, b) => a.name.localeCompare(b.name));
+      else if (sb === 'status') { const o={expired:0,critical:1,warning:2,active:3}; rows.sort((a,b)=>(o[a.status]??9)-(o[b.status]??9)); }
+
+      document.getElementById('recordSubtitle').textContent = `${rows.length} record${rows.length !== 1 ? 's' : ''}`;
+      document.getElementById('tableCount').textContent = rows.length;
+
+      const tbody = document.getElementById('tbody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="ti ti-mood-empty"></i><h3>No records found</h3><p>Try changing your search or filters</p></div></td></tr>`;
+        return;
+      }
+      function esc(s) { return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>
+            <div class="record-name" title="${esc(r.name)}">${esc(r.name)}</div>
+            ${r.notes ? `<div class="record-sub">${esc(r.notes.slice(0,55))}${r.notes.length>55?'…':''}</div>` : ''}
+          </td>
+          <td><span class="cat-tag">${esc(r.cat)}</span></td>
+          <td style="font-size:13px;color:var(--text-secondary)">${esc(r.owner||'—')}</td>
+          <td style="font-size:13px;color:var(--text-secondary)">${esc(r.vendor||'—')}</td>
+          <td style="white-space:nowrap;font-size:13px">${formatDate(r.expiry)}</td>
+          <td>${badgeHTML(r.status)}</td>
+          <td>${daysCellHTML(r.days, r.status)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="icon-btn edit" onclick="location.href='/pages/add.html?id=${r.id}'" title="Edit"><i class="ti ti-edit"></i></button>
+              <button class="icon-btn danger" onclick="openDelete('${r.id}')" title="Delete"><i class="ti ti-trash"></i></button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openDelete(id) { deleteTargetId = id; document.getElementById('deleteModal').style.display = 'flex'; }
+    function closeDeleteModal() { deleteTargetId = null; document.getElementById('deleteModal').style.display = 'none'; }
+
+    async function confirmDelete() {
+      if (!deleteTargetId) return;
+      const btn = document.getElementById('confirmDeleteBtn');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Deleting…';
+      try {
+        await API.deleteRecord(deleteTargetId);
+        closeDeleteModal();
+        showToast('Record deleted successfully', 'success');
+        await init();
+      } catch(err) {
+        showToast('Delete failed: ' + err.message, 'error');
+        btn.disabled = false; btn.innerHTML = '<i class="ti ti-trash"></i> Yes, Delete';
+      }
+    }
+
+    document.getElementById('deleteModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+    });
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
